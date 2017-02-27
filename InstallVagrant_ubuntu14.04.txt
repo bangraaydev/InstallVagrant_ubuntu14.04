@@ -1,0 +1,280 @@
+
+Install virtualbox
+$ sudo apt-get install virtualbox
+
+Install vagrant
+$ sudo apt-get install vagrant
+
+Install paket dkms (vboxdrv, vboxnetflt and vboxnetadp) 
+$ sudo apt-get install virtualbox-dkms
+
+$ mkdir vagrant_project
+$ cd vagrant_project
+$ vagrant init
+
+
+
+Update file "Vagrantfile"
+
+---->>
+VAGRANTFILE_API_VERSION = "2"
+Vagrant.configure(2) do |config|
+  #konfigurasi box untuk sistem operasi ubuntu trusty 64 bit
+  config.vm.box = "ubuntu/trusty64"
+  config.vm.box_url = "https://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box"
+
+  config.vm.provider "virtualbox" do |vb|
+    
+     # konfigurasi virtual box dengan ram 1 GB
+     vb.memory = "1024"
+  end
+
+  #konfigurasi provisioning
+  config.vm.provision "shell", path: "install.sh"
+  
+  #konfigurasi network
+  #port forwarding
+  config.vm.network "forwarded_port", guest: 80, host: 8080
+  config.vm.network :private_network, ip: "192.168.30.30"
+  
+  
+  #jika ingin ip vagrant bisa di akses di komputer lain, harus setting ip(dalam satu jaringan) dan 
+  #mac address(digabung tanpa di pisah dengan tanda ":")
+  # config.vm.network :public_network, ip: "192.168.20.72", :mac => "5CA1AB1E0001"
+
+  # If true, then any SSH connections made will enable agent forwarding.
+  # Default value: false
+    config.ssh.forward_agent = true
+
+end
+---->>
+
+
+$ vagrant up
+$ vagrant ssh
+
+
+
+
+Provisioning
+=================
+
+buat file "install.sh" di dalam folder "vagrant_project"
+
+$ touch install.sh
+$ chmod +x install.sh
+$ nano install.sh
+
+
+
+---->>
+#!/bin/sh
+
+echo "mulai Provisioning"
+echo "software source dan repository"
+cp /vagrant_project/config/sources.list /etc/apt/sources.list
+cp /vagrant_project/config/environment /etc/environment
+
+echo "tambah repository nginx"
+add-apt-repository -y ppa:nginx/stable
+
+apt-get update
+apt-get upgrade -y
+apt-get dist-upgrade -y
+
+echo "Instalasi nginx"
+apt-get install -y nginx
+---->>
+
+
+silahkan buat folder config, kemudian buat file "sources.list" di dalam folder "config". Isikan command berikut ini.
+---->>
+deb http://kambing.ui.ac.id/ubuntu trusty main universe multiverse
+deb http://kambing.ui.ac.id/ubuntu trusty-updates main universe multiverse
+deb http://security.ubuntu.com/ubuntu trusty-security main universe multiverse
+---->>
+
+
+Langkah selanjutnya silahkan buat file "environment" di dalam folder "config" kemudian masukkan perintah berikut ini.
+---->>
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games"
+LC_CTYPE="en_US.UTF-8"
+LC_ALL="en_US.UTF-8"
+---->>
+
+
+
+
+
+
+
+
+============== Copy Vagrant boxes (or duplicate them) ==============
+
+$ vagrant package
+or
+$ vagrant package --output mynew.box
+
+
+-----result
+    Downloading box from URL: file:/home/sysadmin/vagrant_project/package.box
+    Extracting box...te: 21.3M/s, Estimated time remaining: --:--:--)
+    Successfully added box 'ubuntuFix64' with provider 'virtualbox'!
+
+    root@sysadmin-H61H2-M12:/home/sysadmin/vagrant_project# ll
+    total 862208
+    drwxr-xr-x  3 root     root          4096 Peb 23 10:18 ./
+    drwxr-xr-x 42 sysadmin sysadmin      4096 Peb 23 10:02 ../
+    -rw-r--r--  1 root     root     441434644 Peb 23 10:18 package.box
+    -rw-r--r--  1 root     root     441434618 Peb 23 10:10 trusty64.box
+    drwxr-xr-x  3 root     root          4096 Peb 22 10:51 .vagrant/
+    -rw-r--r--  1 root     root          5231 Peb 23 09:30 Vagrantfile
+-----endresult
+
+
+//copy file "package.box" and "Vagrantfile" to another pc (reuse again) 
+
+//edit file "Vagrantfile" 
+//for linux A config.vm.box_url is not necessary anymore.
+----------------------------------------------------
+config.vm.box = "ubuntuFix64"
+
+//for windows be must set 
+config.vm.box_url = "file:///d:/folder/package.box"
+-----------------------------------------------------
+
+//Add the Box into Your Vagrant Install
+$ vagrant box add ubuntuFix64 package.box virtualbox
+
+
+$ vagrant up
+
+
+======== FINISH ========
+
+
+
+
+
+
+//Full Configuration - "Vagrantfile"
+------------------------------------------------------startFile
+
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(2) do |config|
+   config.vm.box = "ubuntuFix64"
+  #config.vm.box_url = "https://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box"
+
+  config.vm.provider "virtualbox" do |vb|
+    
+    # konfigurasi virtual box dengan ram 1 GB
+    vb.memory = "1024"
+  end
+
+
+  # accessing "localhost:8080" will access port 80 on the guest machine.
+    config.vm.network :forwarded_port, guest: 80, host: 8080
+
+
+  # Create a private network, which allows host-only access to the machine
+  # using a specific IP.
+  # config.vm.network :private_network, ip: "192.168.20.30"
+
+  # Create a public network, which generally matched to bridged network.
+  # Bridged networks make the machine appear as another physical device on
+  # your network.
+  # config.vm.network :public_network
+    #jika ingin ip vagrant bisa di akses di komputer lain, harus setting ip(dalam satu jaringan) dan mac address(digabung tanpa di pisah dengan ":") 
+    config.vm.network :public_network, ip: "192.168.20.72", :mac => "5CA1AB1E0001"
+
+  # If true, then any SSH connections made will enable agent forwarding.
+  # Default value: false
+    config.ssh.forward_agent = true
+    #config.ssh.username = 'root'
+    #config.ssh.password = 'vagrant'
+    #config.ssh.insert_key = 'false'
+
+end
+------------------------------------------------------endFile
+
+
+
+
+
+//ANOTHER CONFIGURATION (1)
+---------------------------------------------------------------------------
+Vagrant.configure("2") do |config|
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "1024"
+  end
+
+  # Every Vagrant development environment requires a box. You can search for
+  # boxes at https://atlas.hashicorp.com/search.
+  config.vm.box = "testingfix"
+  #config.vm.box_url = " file:///D:/testing_fix/project_finall.box"
+
+
+  config.vm.define :testingfixok do |testingfixok|
+    # Hostname to set on the node
+    testingfixok.vm.host_name="testingfixok"
+
+    # Hostonly network interface, used for internode communication
+    testingfixok.vm.network "private_network", ip: "192.168.70.87"
+    testingfixok.vm.network "forwarded_port", guest: 80, host: 8080
+  end
+
+end
+---------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+//ANOTHER CONFIGURATION (2)
+------------------------------------------------------------------------------
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "1024"
+  end
+
+  #config.vm.box = "ubuntu/trusty64"
+  config.vm.box = "opensuse/openSUSE-42.1-x86_64"
+
+  config.vm.define :elkserver do |elkserver|
+    # Hostname to set on the node
+    elkserver.vm.host_name="elkserver"
+
+    # Hostonly network interface, used for internode communication
+    elkserver.vm.network "private_network", ip: "192.168.98.101"
+    elkserver.vm.network "forwarded_port", guest: 80, host: 8080
+
+  end
+
+  config.vm.define :elkclient do |elkclient|
+    # Hostname to set on the node
+    elkclient.vm.host_name="elkclient"
+
+    # Hostonly network interface, used for internode communication
+    elkclient.vm.network "private_network", ip: "192.168.98.102"
+
+  end
+end
+------------------------------------------------------------------------------
+
